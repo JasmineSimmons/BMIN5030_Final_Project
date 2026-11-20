@@ -105,6 +105,13 @@ recovery_count
 ```
 
 ```{r}
+#converting to factor
+
+final_ppcm_model_data <- final_ppcm_model_data |>
+  mutate(Recovery_from_PPCM = as.factor(Recovery_from_PPCM))
+```
+
+```{r}
 #creating folds
 
 ppcm_data_folds <- vfold_cv(final_ppcm_model_data, v = 5, strata = Recovery_from_PPCM)
@@ -118,9 +125,33 @@ ppcm_data_recipe <- recipe(Recovery_from_PPCM ~ ., data = final_ppcm_model_data)
   step_normalize(all_numeric_predictors())
 ```
 
+```{r}
+#logistic regression
+
+log_regression_model <- logistic_reg() |>
+  set_engine("glm")
+
+log_regression_wf <- workflow() |>
+  add_recipe(ppcm_data_recipe) |>
+  add_model(log_regression_model)
+
+log_regression_cross_validation <- log_regression_wf |>
+  fit_resamples(ppcm_data_folds, control = control_resamples(save_pred = TRUE))
+
+
+```
+
 ## Results {#sec-results}
 
 Describe your results and include relevant tables, plots, and code/comments used to obtain them. You may refer to the @sec-methods as needed. End with a brief conclusion of your findings related to the question you set out to address. You can include references if you'd like, but this is not required.
+
+```{r}
+#logistic regression preliminary results
+
+collect_metrics(log_regression_cross_validation)
+```
+
+This initial 5-fold cross validation via logistic regression resulted in mean accuracy of 0.5841414, brier_class of 0.2784772, and roc_auc of 0.6118642.
 
 ## Conclusion
 
