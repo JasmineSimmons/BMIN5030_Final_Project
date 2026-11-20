@@ -41,6 +41,83 @@ Overall: create and evaluate prediction models of recovery from PPCM using logis
 3.  Use glmnet, xgboost, and randomForest packages to create and optimize prediction models using cross-fold validation
 4.  Evaluate the models on independent dataset
 
+```{r}
+library(tidyverse)
+```
+
+```{r}
+#loading data
+ppcm_data <- read_csv(
+  "C:/Users/jsimm/Dropbox/BMIN 5030/Final Project/FinalPPCMData Deidentified.csv",
+  locale = locale(encoding = "Windows-1252"),
+  show_col_types = FALSE
+)
+
+ppcm_data
+```
+
+```{r}
+#loading and installing packages
+install.packages("glmnet")
+install.packages("randomForest")
+install.packages("xgboost")
+
+library(tidymodels)
+library(vip)
+```
+
+```{r}
+
+#cleaning_data
+#removing patient's whose outcome was unknown
+ppcm_data_known_outcome = ppcm_data |> drop_na("64. endpoint")
+
+#selecting predictor columns
+ppcm_model_data = ppcm_data_known_outcome |> select("31. age_at_dx", "35. deliverytype", "39. diagduring", "45. ef", "43. lvidd","44. lvids", "49. arrhythmia","59. preghyper", "61. chronhyper", "51. documentation_of_EF >55%" )
+
+#renaming columns
+ppcm_model_data = ppcm_model_data |> rename(Age_at_Diagnosis = `31. age_at_dx`,
+                                            Type_of_Delivery = `35. deliverytype`,
+                                            Period_Diagnosed = `39. diagduring`,
+                                            EF_at_iagnosis = `45. ef`,
+                                            LVIDD_at_Diagnosis = `43. lvidd`,
+                                            LVIDS_at_Diagnosis = `44. lvids`,
+                                            Arrhythmia_Present = `49. arrhythmia`,
+                                            Pregnancy_Related_Hypertension = `59. preghyper`,
+                                            Previous_Chronic_Hypertension = `61. chronhyper`,
+                                            Recovery_from_PPCM = `51. documentation_of_EF >55%`)
+
+ppcm_model_data = ppcm_model_data |> rename(EF_at_Diagnosis = EF_at_iagnosis)
+
+
+#coding 999 as unknown for arrhythmia column
+
+final_ppcm_model_data = ppcm_model_data |> mutate(Arrhythmia_Present = na_if(Arrhythmia_Present, 999))
+
+final_ppcm_model_data
+```
+
+```{r}
+#number of patients who did and did not recover
+
+recovery_count = final_ppcm_model_data |> count(Recovery_from_PPCM)
+recovery_count
+```
+
+```{r}
+#creating folds
+
+ppcm_data_folds <- vfold_cv(final_ppcm_model_data, v = 5, strata = Recovery_from_PPCM)
+```
+
+```{r}
+#creating recipe
+
+ppcm_data_recipe <- recipe(Recovery_from_PPCM ~ ., data = final_ppcm_model_data) |>
+  step_dummy(all_nominal_predictors()) |>
+  step_normalize(all_numeric_predictors())
+```
+
 ## Results {#sec-results}
 
 Describe your results and include relevant tables, plots, and code/comments used to obtain them. You may refer to the @sec-methods as needed. End with a brief conclusion of your findings related to the question you set out to address. You can include references if you'd like, but this is not required.
